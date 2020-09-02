@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
  
-namespace Runtime.Web.Annotations;
+namespace Runtime.Web.Backend;
 
 use Runtime.CoreStruct;
 use Runtime.Annotations.Entity;

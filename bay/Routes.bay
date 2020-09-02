@@ -18,25 +18,20 @@
 
 namespace Runtime.Web.Backend;
 
-use Runtime.lib;
-use Runtime.CoreProvider;
-use Runtime.MessageRPC;
-use Runtime.RuntimeConstant;
 use Runtime.RuntimeUtils;
-use Runtime.Exceptions.ApiException;
-use Runtime.Exceptions.RuntimeException;
-use Runtime.Web.Annotations.Route;
-use Runtime.Web.Annotations.RouteList;
-use Runtime.Web.Backend.ApiContainer;
-use Runtime.Web.JsonResponse;
+use Runtime.Core.BusDriverInterface;
+use Runtime.Core.RemoteCallEvent;
+use Runtime.Core.RemoteCallResponse;
 use Runtime.Web.RenderContainer;
-use Runtime.Web.RenderHelper;
+use Runtime.Web.Route;
+use Runtime.Web.RouteList;
+use Runtime.Web.Backend.Api;
+use Runtime.Web.Backend.JsonResponse;
 
 
 @RouteList{}
-class ApiRoutes 
+static class Routes
 {
-	
 	
 	/**
 	 * Api Action
@@ -49,23 +44,38 @@ class ApiRoutes
 	} 
 	static async RenderContainer ApiAction(RenderContainer container)
 	{
+		if (not container.isRequestExists()) return [ container ];
+		
 		string data1 = container.request.payload.get("DATA", "");
-		var data2 = RuntimeUtils::base64_decode_url(data1);
+		string data2 = rs::base64_decode_url(data1);
 		var data3 = RuntimeUtils::json_decode(data2);
 		
-		MessageRPC msg = container -> await method sendMessage
+		/* Change api request */
+		RemoteCallEvent event = new RemoteCallEvent
 		{
-			"is_external": true,
 			"api_name": container.route_params.item("api_name"),
 			"space_name": container.route_params.item("space_name"),
 			"method_name": container.route_params.item("method_name"),
 			"data": data3,
+			"storage": [],
+		};
+		list res = @.chain(Api::CHAIN_PREPARE, [container, event]);
+		event = res[1];
+		
+		/* Send request */
+		BusDriverInterface bus = @.getDriver("default:external_bus");
+		RemoteCallResponse answer = await bus.remoteCall
+		{
+			"api_name": container.route_params.item("api_name"),
+			"space_name": container.route_params.item("space_name"),
+			"method_name": container.route_params.item("method_name"),
+			"data": event.data,
+			"storage": event.storage,
 		};
 		
-		JsonResponse response = new JsonResponse{ "data": msg.takeDict() };
+		JsonResponse response = new JsonResponse{ "data": answer.takeDict() };
 		container <= response <= response;
-		return container;
+		return [ container ];
 	}
-	
 	
 }

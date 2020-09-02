@@ -1,0 +1,32 @@
+<class version="1.0"
+	name="Runtime.Web.Backend.Pattern" extends="Runtime.Web.Component" 
+	module="Runtime.Web.Backend" model="Runtime.Web.LayoutModel"
+>
+
+<use name="Runtime.Web.RenderDriver" />
+
+<template name="render">
+<html>
+<head>
+<title>{ model.title }</title>
+<style id='root_style'>@raw{ rs::spaceless( RenderDriver::getLayoutCSS(model) ) }</style>
+</head>
+<body>
+
+%var string model_encoded = rs::base64_encode_url(rtl::json_encode(model));
+
+<div id='root'>{ content }</div>
+<input id='root_model' type='hidden' value={ model_encoded } />
+
+<script src="/js/runtime.js"></script>
+<script src="/js/app.js"></script>
+
+<script>
+runWebApp( @json{ params["env"] } );
+</script>
+
+</body>
+</html>
+</template>
+
+</class>

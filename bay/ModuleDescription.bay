@@ -18,22 +18,17 @@
  
 namespace Runtime.Web.Backend;
 
-use Runtime.lib;
-use Runtime.Context;
-use Runtime.CoreStruct;
-use Runtime.RuntimeConstant;
-use Runtime.Annotations.Entity;
-use Runtime.Annotations.Provider;
-use Runtime.Annotations.LambdaChain;
-use Runtime.Annotations.LambdaChainDeclare;
-use Runtime.Interfaces.ModuleDescriptionInterface;
-use Runtime.Web.Backend.LocalBusProvider;
-use Runtime.Web.Backend.RenderChain;
-use Runtime.Web.RenderContainer;
-use Runtime.Web.RenderHelper;
+use Runtime.BaseStruct;
+use Runtime.Core.Context;
+use Runtime.Core.Driver;
+use Runtime.Core.Entity;
+use Runtime.Core.LambdaChain;
+use Runtime.Core.LambdaChainDeclare;
+use Runtime.Web.RenderDriver;
+use Runtime.Web.Backend.ExternalBusDriver;
 
 
-class ModuleDescription implements ModuleDescriptionInterface
+static class ModuleDescription
 {
 	
 	/**
@@ -48,7 +43,7 @@ class ModuleDescription implements ModuleDescriptionInterface
 	 * Returns module name
 	 * @return string
 	 */
-	pure string getModuleVersion() => "0.8.0";
+	pure string getModuleVersion() => "0.10.0";
 	
 	
 	
@@ -76,120 +71,28 @@ class ModuleDescription implements ModuleDescriptionInterface
 			"value": "Runtime.Web.Backend.ModuleDescription::extendEntities",
 		},
 		
-		/* Declare Lambda chain Runtime.Web.Backend.Request */
-		new LambdaChainDeclare{ "name": RenderHelper::RENDER_CHAIN, "is_await": true },
-		
-		/* Find api method */
+		/* Render Chain. Set enviroments */
 		new LambdaChain
 		{
-			"name": RenderHelper::API_CHAIN,
-			"value": "Runtime.Web.Backend.LocalBusProvider::findApiMethod",
-			"pos": RenderHelper::API_CHAIN_FIND_METHOD,
+			"name": RenderDriver::RENDER_CHAIN,
+			"value": "Runtime.Web.Backend.CGI::chainRenderSetFrontendEnv",
+			"pos": RenderDriver::RENDER_CHAIN_SET_FRONTEND_ENVIROMENTS,
 		},
 		
-		/* Api Middleware */
+		/* Render Chain. Pattern */
 		new LambdaChain
 		{
-			"name": RenderHelper::API_CHAIN,
-			"value": "Runtime.Web.Backend.LocalBusProvider::callApiMiddleware",
-			"pos": RenderHelper::API_CHAIN_MIDDLEWARE,
-			"is_await": true,
+			"name": RenderDriver::RENDER_CHAIN,
+			"value": "Runtime.Web.Backend.CGI::chainRenderPatternDefault",
+			"pos": RenderDriver::RENDER_CHAIN_RESPONSE - 1,
 		},
 		
-		/* Api Run */
+		/* Render Chain. Response */
 		new LambdaChain
 		{
-			"name": RenderHelper::API_CHAIN,
-			"value": "Runtime.Web.Backend.LocalBusProvider::callApiRun",
-			"pos": RenderHelper::API_CHAIN_RUN,
-			"is_await": true,
-		},
-		
-		/* Api Answer */
-		new LambdaChain
-		{
-			"name": RenderHelper::API_CHAIN,
-			"value": "Runtime.Web.Backend.LocalBusProvider::callApiAnswer",
-			"pos": RenderHelper::API_CHAIN_ANSWER,
-		},
-		
-		/* Start */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::start",
-			"pos": RenderHelper::RENDER_CHAIN_START,
-		},
-		
-		/* Create layout model */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::createLayoutModel",
-			"pos": RenderHelper::RENDER_CHAIN_CREATE_LAYOUT_MODEL,
-		},
-		
-		/* Set enviroments */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::setFrontendEnviroment",
-			"pos": RenderHelper::RENDER_CHAIN_SET_FRONTEND_ENVIROMENTS,
-		},
-		
-		/* Call middleware route */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::callRouteMiddleware",
-			"pos": RenderHelper::RENDER_CHAIN_CALL_ROUTE_PRE,
-			"is_await": true,
-		},
-		
-		/* Call route */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::callRoute",
-			"pos": RenderHelper::RENDER_CHAIN_CALL_ROUTE,
-			"is_await": true,
-		},
-		
-		/* Init assets */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::initAssets",
-			"pos": RenderHelper::RENDER_CHAIN_INIT_ASSETS,
-		},
-		
-		/* Returns response */
-		new LambdaChain
-		{
-			"name": RenderHelper::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.RenderChain::response",
-			"pos": RenderHelper::RENDER_CHAIN_RESPONSE,
-		},
-		
-		/* Seo chain */
-		new LambdaChain
-		{
-			"name": RenderHelper::PATTERN_HEADER_SEO,
-			"value": "Runtime.Web.Backend.Pattern::renderSeo",
-		},
-		
-		/* Header After chain */
-		new LambdaChain
-		{
-			"name": RenderHelper::PATTERN_HEADER_AFTER,
-			"value": "Runtime.Web.Backend.Pattern::renderHeader",
-		},
-		
-		/* Render body scripts */
-		new LambdaChain
-		{
-			"name": RenderHelper::PATTERN_BODY_AFTER,
-			"value": "Runtime.Web.Backend.Pattern::renderBodyScripts",
+			"name": RenderDriver::RENDER_CHAIN,
+			"value": "Runtime.Web.Backend.CGI::chainRenderCreateResponse",
+			"pos": RenderDriver::RENDER_CHAIN_RESPONSE,
 		},
 	];
 	
@@ -198,31 +101,22 @@ class ModuleDescription implements ModuleDescriptionInterface
 	/**
 	 * Extend entities
 	 */
-	pure Collection<CoreStruct> extendEntities(Context c, Collection<CoreStruct> entities)
+	pure Collection<BaseStruct> extendEntities(Context c, Collection<BaseStruct> entities)
 	{
-		bool api = c ->
-			method config(["Runtime.Web.Backend", "api"], true) ->
-			monad lib::to("bool", true)
-		;
-		bool bus_default = c ->
-			method config(["Runtime.Web.Backend", "bus_default"], true) ->
-			monad lib::to("bool", true)
-		;
-		string bus = c ->
-			method config(["Runtime.Web.Backend", "bus"], "") ->
-			monad lib::to("string", "")
-		;
+		bool api = c |> "Runtime.Web.Backend", "api" |> default bool true;
+		string bus = c |> "Runtime.Web.Backend", "bus" |> default string "";
+		bool bus_default = c |> "Runtime.Web.Backend", "bus_default" |> default bool true;
 		
 		/* Enable api service */
 		if (api)
 		{
-			entities = entities.prependIm( new Entity{ "name": "Runtime.Web.Backend.ApiRoutes" } );
+			entities = entities.prependIm( new Entity{ "name": "Runtime.Web.Backend.Routes" } );
 		}
 		
 		/* Set default bus */
 		if (bus == "" and bus_default)
 		{
-			bus = classof LocalBusProvider;
+			bus = classof ExternalBusDriver;
 		}
 		
 		/* Enable local bus provider */
@@ -230,11 +124,11 @@ class ModuleDescription implements ModuleDescriptionInterface
 		{
 			entities = entities.prependIm
 			(
-				new Provider{ "name": RuntimeConstant::BUS_INTERFACE, "value": bus }
+				new Driver{ "name": "default:external_bus", "value": bus }
 			);
 		}
 		
-		return entities;
+		return [c, entities];
 	}
 	
 }

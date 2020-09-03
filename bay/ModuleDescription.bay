@@ -26,6 +26,7 @@ use Runtime.Core.LambdaChain;
 use Runtime.Core.LambdaChainDeclare;
 use Runtime.Web.RenderDriver;
 use Runtime.Web.Backend.ExternalBusDriver;
+use Runtime.Web.Backend.Routes;
 
 
 static class ModuleDescription
@@ -64,6 +65,9 @@ static class ModuleDescription
 	 */
 	pure Collection<Dict> entities() => 
 	[
+		/* Register external bus driver */
+		new Driver{ "name": "default:external_bus", "value": classof ExternalBusDriver },
+		
 		/* Extend entities */
 		new LambdaChain
 		{
@@ -75,7 +79,7 @@ static class ModuleDescription
 		new LambdaChain
 		{
 			"name": RenderDriver::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.CGI::chainRenderSetFrontendEnv",
+			"value": "Runtime.Web.Backend.BackendHelper::renderChainSetFrontendEnv",
 			"pos": RenderDriver::RENDER_CHAIN_SET_FRONTEND_ENVIROMENTS,
 		},
 		
@@ -83,7 +87,7 @@ static class ModuleDescription
 		new LambdaChain
 		{
 			"name": RenderDriver::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.CGI::chainRenderPatternDefault",
+			"value": "Runtime.Web.Backend.BackendHelper::renderChainPatternDefault",
 			"pos": RenderDriver::RENDER_CHAIN_RESPONSE - 1,
 		},
 		
@@ -91,9 +95,12 @@ static class ModuleDescription
 		new LambdaChain
 		{
 			"name": RenderDriver::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.CGI::chainRenderCreateResponse",
+			"value": "Runtime.Web.Backend.BackendHelper::renderChainCreateResponse",
 			"pos": RenderDriver::RENDER_CHAIN_RESPONSE,
 		},
+		
+		/* Add routes */
+		new Entity{ "name": classof Routes },
 	];
 	
 	
@@ -104,7 +111,7 @@ static class ModuleDescription
 	pure Collection<BaseStruct> extendEntities(Context c, Collection<BaseStruct> entities)
 	{
 		bool api = c |> "Runtime.Web.Backend", "api" |> default bool true;
-		string bus = c |> "Runtime.Web.Backend", "bus" |> default string "";
+		string bus_class = c |> "Runtime.Web.Backend", "bus_class" |> default string "";
 		bool bus_default = c |> "Runtime.Web.Backend", "bus_default" |> default bool true;
 		
 		/* Enable api service */
@@ -114,17 +121,17 @@ static class ModuleDescription
 		}
 		
 		/* Set default bus */
-		if (bus == "" and bus_default)
+		if (bus_class == "" and bus_default)
 		{
-			bus = classof ExternalBusDriver;
+			bus_class = classof ExternalBusDriver;
 		}
 		
 		/* Enable local bus provider */
-		if (bus != "")
+		if (bus_class != "")
 		{
 			entities = entities.prependIm
 			(
-				new Driver{ "name": "default:external_bus", "value": bus }
+				new Driver{ "name": "default:external_bus", "value": bus_class }
 			);
 		}
 		

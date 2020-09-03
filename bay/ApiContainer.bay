@@ -20,11 +20,12 @@ namespace Runtime.Web.Backend;
 
 use Runtime.CoreStruct;
 use Runtime.Annotations.Entity;
+use Runtime.Core.RemoteCallAnswer;
+use Runtime.Core.RemoteCallRequest;
 
 
-struct ApiList extends Entity
+struct ApiContainer extends Entity
 {
-	string api_name = "";
-	string interface_name = "";
-	string apiName() => this.api_name != "" ? this.api_name : this.getClassName();
+	RemoteCallAnswer answer = null;
+	RemoteCallRequest request = null;
 }

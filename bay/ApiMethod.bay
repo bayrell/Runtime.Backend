@@ -24,7 +24,7 @@ use Runtime.CoreStruct;
 struct ApiMethod extends CoreStruct
 {
 	string api_name = "";
-	string space_name = "";
+	string interface_name = "";
 	string class_name = "";
 	string class_method_name = "";
 	string method_name = "";

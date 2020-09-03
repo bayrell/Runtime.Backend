@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
  
-namespace Runtime.Web;
+namespace Runtime.Web.Backend;
 
 use Runtime.CoreObject;
 use Runtime.RuntimeUtils;
@@ -46,9 +46,9 @@ struct JsonResponse extends Response
 	/**
 	 * Returns content
 	 */
-	pure string getContent(JsonResponse r)
+	string getContent()
 	{
-		return RuntimeUtils::json_encode(r.data);
+		return RuntimeUtils::json_encode(this.data);
 	}
 	
 }

@@ -100,65 +100,6 @@ static class CGI
 	
 	
 	
-	/**
-	 * Layout chain
-	 */
-	pure RenderContainer chainRenderSetFrontendEnv(RenderContainer container)
-	{
-		container <= env <= "X-ROUTE-PREFIX" <= @.env("X-ROUTE-PREFIX", "");
-		return [ container ];
-	}
-	
-	
-	
-	/**
-	 * Layout chain
-	 */
-	pure RenderContainer chainRenderPatternDefault(RenderContainer container)
-	{
-		if (container.pattern_name == "default" and container.pattern_class == "" or container.pattern_class == "")
-		{
-			container <= pattern_class <= classof Pattern;
-		}
-		return [ container ];
-	}
-	
-	
-	
-	/**
-	 * Render chain
-	 * Create layout model
-	 */
-	static RenderContainer chainRenderCreateResponse(RenderContainer container)
-	{
-		if (container == null) return [ container ];
-		if (container.isResponseExists()) return [ container ];
-		
-		/* Get params */
-		LayoutModel layout = RenderDriver::chainLayout(container.layout);
-		Dict params = container.bag;
-		params = params.setIm("env", container.env);
-		
-		/* Render layout */
-		fn render = rtl::method(layout.layout_class, "render");
-		string layout_content = render(layout, layout, {}, null);
-		
-		/* Render pattern */
-		fn render = rtl::method(container.pattern_class, "render");
-		string patter_content = render(layout, layout, params, layout_content);
-		
-		/* Create response */
-		container <= response <= new Response
-		{
-			"content": patter_content,
-			"headers": container.new_headers,
-			"http_code": container.new_http_code,
-		};
-		
-		return [ container ];
-	}
-	
-	
 	
 	/**
 	 * Output result

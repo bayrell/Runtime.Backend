@@ -19,13 +19,12 @@
 namespace Runtime.Web.Backend;
 
 use Runtime.RuntimeUtils;
-use Runtime.Core.BusDriverInterface;
-use Runtime.Core.RemoteCallEvent;
-use Runtime.Core.RemoteCallResponse;
+use Runtime.Core.ApiException;
+use Runtime.Core.RemoteCallAnswer;
 use Runtime.Web.RenderContainer;
 use Runtime.Web.Route;
 use Runtime.Web.RouteList;
-use Runtime.Web.Backend.Api;
+use Runtime.Web.Backend.BackendHelper;
 use Runtime.Web.Backend.JsonResponse;
 
 
@@ -39,43 +38,68 @@ static class Routes
 	 */
 	@Route
 	{ 
-		"uri": "/api/{api_name}/{space_name}/{method_name}/", 
+		"uri": "/api/{app_name}/{object_name}/{interface_name}/{method_name}/", 
 		"name": "api:route" 
 	} 
 	static async RenderContainer ApiAction(RenderContainer container)
 	{
+		RemoteCallAnswer answer = null;
+		
 		if (not container.isRequestExists()) return [ container ];
-		
-		string data1 = container.request.payload.get("DATA", "");
-		string data2 = rs::base64_decode_url(data1);
-		var data3 = RuntimeUtils::json_decode(data2);
-		
-		/* Change api request */
-		RemoteCallEvent event = new RemoteCallEvent
+		if (container.request.method != "POST")
 		{
-			"api_name": container.route_params.item("api_name"),
-			"space_name": container.route_params.item("space_name"),
-			"method_name": container.route_params.item("method_name"),
-			"data": data3,
-			"storage": [],
-		};
-		list res = @.chain(Api::CHAIN_PREPARE, [container, event]);
-		event = res[1];
-		
-		/* Send request */
-		BusDriverInterface bus = @.getDriver("default:external_bus");
-		RemoteCallResponse answer = await bus.remoteCall
+			answer = new RemoteCallAnswer();
+			
+			/* Set exception */
+			answer = answer::exception
+			(
+				answer,
+				new ApiException
+				(
+					_("Runtime", "The request must be POST method"),
+					rtl::ERROR_API_WRONG_FORMAT
+				)
+			);
+		}
+		else
 		{
-			"api_name": container.route_params.item("api_name"),
-			"space_name": container.route_params.item("space_name"),
-			"method_name": container.route_params.item("method_name"),
-			"data": event.data,
-			"storage": event.storage,
-		};
+			/* Decode data */
+			string data1 = container.request.payload.get("data", "");
+			var data = RuntimeUtils::json_decode(data1);
+			
+			/* Decode storage */
+			string storage1 = container.request.payload.get("storage", "");
+			var storage = RuntimeUtils::json_decode(storage1);
+			
+			/* Send request */
+			answer = await BackendHelper::remoteBusCall
+			(
+				container,
+				{
+					"app_name": container.route_params.item("app_name"),
+					"object_name": container.route_params.item("object_name"),
+					"interface_name": container.route_params.item("interface_name"),
+					"method_name": container.route_params.item("method_name"),
+					"data": data,
+					"storage": storage,
+				}
+			);
+		}
 		
-		JsonResponse response = new JsonResponse{ "data": answer.takeDict() };
+		if (answer == null)
+		{
+			answer = new RemoteCallAnswer();
+		}
+		else
+		{
+			answer <= have_answer <= true;
+		}
+		
+		answer <= app_name <= @.main_module;
+		
+		JsonResponse response = new JsonResponse{ "data": answer != null ? answer.takeDict() : null };
 		container <= response <= response;
-		return [ container ];
+		return container;
 	}
 	
 }

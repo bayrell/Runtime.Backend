@@ -111,8 +111,8 @@ static class ModuleDescription
 	pure Collection<BaseStruct> extendEntities(Context c, Collection<BaseStruct> entities)
 	{
 		bool api = c |> "Runtime.Web.Backend", "api" |> default bool true;
-		string bus_class = c |> "Runtime.Web.Backend", "bus_class" |> default string "";
-		bool bus_default = c |> "Runtime.Web.Backend", "bus_default" |> default bool true;
+		string bus_class = c |> "Runtime.Web.Backend", "external_bus_class" |> default string "";
+		bool bus_default = c |> "Runtime.Web.Backend", "external_bus_default" |> default bool true;
 		
 		/* Enable api service */
 		if (api)

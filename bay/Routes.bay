@@ -99,7 +99,7 @@ static class Routes
 		
 		JsonResponse response = new JsonResponse{ "data": answer != null ? answer.takeDict() : null };
 		container <= response <= response;
-		return container;
+		return [ container ];
 	}
 	
 }

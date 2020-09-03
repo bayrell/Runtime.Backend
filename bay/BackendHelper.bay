@@ -38,9 +38,9 @@ static class BackendHelper
 	 */
 	pure RenderContainer renderChainSetFrontendEnv(RenderContainer container)
 	{
-		container <= env <= "APP_MODE" <= @.env("APP_MODE", "prod");
-		container <= env <= "X-APP-HASH" <= RenderDriver::getCssHash(@.main_class);
-		container <= env <= "X-ROUTE-PREFIX" <= @.env("X-ROUTE-PREFIX", "");
+		container <= frontend_env <= "APP_MODE" <= @.env("APP_MODE", "prod");
+		container <= frontend_env <= "X-APP-HASH" <= RenderDriver::getCssHash(@.main_class);
+		container <= frontend_env <= "X-ROUTE-PREFIX" <= @.env("X-ROUTE-PREFIX", "");
 		return [ container ];
 	}
 	
@@ -71,8 +71,7 @@ static class BackendHelper
 		
 		/* Get params */
 		LayoutModel layout = RenderDriver::chainLayout(container.layout);
-		Dict params = container.bag;
-		params = params.setIm("env", container.env);
+		Dict params = {};
 		
 		/* Render layout */
 		fn render = rtl::method(layout.layout_class, "render");
@@ -80,7 +79,7 @@ static class BackendHelper
 		
 		/* Render pattern */
 		fn render = rtl::method(container.pattern_class, "render");
-		string patter_content = render(layout, layout, params, layout_content);
+		string patter_content = render(container, layout, params, layout_content);
 		
 		/* Create response */
 		container <= response <= new Response
@@ -114,18 +113,19 @@ static class BackendHelper
 		list res = @.chain(BackendHelper::BACKEND_API_PREPARE_CHAIN, [container, request]);
 		request = res[1];
 		
-		/* Send request */
-		BusDriverInterface bus = @.getDriver("default:external_bus");
-		RemoteCallAnswer answer = await bus.remoteBusCall
+		/* Restore request */
+		request = request.copy
 		{
 			"uri": items.get("uri", ""),
 			"app_name": items.get("app_name", "self"),
 			"object_name": items.get("object_name", ""),
 			"interface_name": items.get("interface_name", "default"),
 			"method_name": items.get("method_name", ""),
-			"data": request.data,
-			"storage": request.storage,
 		};
+		
+		/* Send request */
+		BusDriverInterface bus = @.getDriver("default:external_bus");
+		RemoteCallAnswer answer = await bus.remoteBusCall(request);
 		
 		return answer;
 	}

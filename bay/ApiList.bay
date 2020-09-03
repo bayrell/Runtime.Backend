@@ -18,13 +18,13 @@
  
 namespace Runtime.Web.Backend;
 
-use Runtime.CoreStruct;
-use Runtime.Annotations.Entity;
+use Runtime.BaseStruct;
+use Runtime.Core.Entity;
 
 
 struct ApiList extends Entity
 {
-	string api_name = "";
+	string object_name = "";
 	string interface_name = "";
-	string apiName() => this.api_name != "" ? this.api_name : this.getClassName();
+	string apiName() => this.object_name != "" ? this.object_name : this.getClassName();
 }

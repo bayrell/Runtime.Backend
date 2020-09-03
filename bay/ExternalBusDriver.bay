@@ -18,21 +18,34 @@
 
 namespace Runtime.Web.Backend;
 
-use Runtime.RuntimeConstant;
+use Runtime.lib;
+use Runtime.BaseStruct;
+use Runtime.IntrospectionClass;
+use Runtime.RuntimeUtils;
+use Runtime.Core.ApiException;
 use Runtime.Core.BusDriverInterface;
 use Runtime.Core.CoreDriver;
 use Runtime.Core.Message;
 use Runtime.Core.RemoteCallAnswer;
+use Runtime.Core.RemoteCallRequest;
+use Runtime.Exceptions.RuntimeException;
+use Runtime.Web.Backend.ApiContainer;
+use Runtime.Web.Backend.ApiList;
+use Runtime.Web.Backend.ApiMethod;
 
 
 class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 {
+	
+	Collection<ApiMethod> api_methods = null;
+	
 	
 	/**
 	 * Start driver
 	 */
 	public async void startDriver()
 	{
+		this.api_methods = static::getApiMethodsByEntities(@.entities);
 	}
 	
 	
@@ -51,15 +64,20 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 	 * Send message
 	 * @return string
 	 */
-	async RemoteCallAnswer remoteBusCall(Dict items)
+	async RemoteCallAnswer remoteBusCall(RemoteCallRequest request)
 	{
-		string app_name = items.get("app_name", "");
+		RemoteCallAnswer answer = new RemoteCallAnswer
+		{
+			"object_name": request.object_name,
+			"interface_name": request.interface_name,
+			"method_name": request.method_name,
+		};
+		
+		string app_name = request.app_name;
 		
 		/* Check correct app name */
-		if (app_name != "self" or app_name != @.main_module)
+		if (app_name != "self" and app_name != @.main_module)
 		{
-			answer = new RemoteCallAnswer();
-			
 			/* Set exception */
 			answer = answer::exception
 			(
@@ -74,9 +92,170 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 			return answer;
 		}
 		
+		/* Find api method */
+		ApiMethod api_method = this.findApiMethod(request);
+		if (api_method == null)
+		{
+			/* Set exception */
+			answer = answer::exception
+			(
+				answer,
+				new ApiException
+				(
+					_("Runtime", "Api not found"),
+					rtl::ERROR_API_NOT_FOUND
+				)
+			);
+			
+			return answer;
+		}
 		
+		/* Get api method */
+		string class_name = api_method.class_name;
+		string class_method_name = api_method.class_method_name;
 		
+		/* Check if method exists */
+		if (not rtl::method_exists(class_name, class_method_name))
+		{
+			/* Set exception */
+			answer = answer::exception
+			(
+				answer,
+				new ApiException
+				(
+					_("Runtime", "Api found but method does not exists"),
+					rtl::ERROR_API_NOT_FOUND
+				)
+			);
+			
+			return answer;
+		}
 		
+		/* Call api */
+		try
+		{
+			fn f = rtl::method(class_name, class_method_name);
+			list res = await f(request, answer);
+			answer = res[1];
+		}
+		catch (ApiException e)
+		{
+			/* Set exception */
+			answer = answer::exception(answer, e);
+		}
+		catch (RuntimeException e)
+		{
+			/* Set exception */
+			answer = answer::exception
+			(
+				answer,
+				new ApiException
+				(
+					e.getErrorMessage(),
+					rtl::ERROR_FATAL
+				)
+			);
+		}
+		
+		return answer;
 	}
 	
+	
+	
+	/**
+	 * Find api method
+	 */
+	ApiMethod findApiMethod(RemoteCallRequest request)
+	{
+		Collection<ApiMethod> api_methods = this.api_methods;
+		string object_name = request.object_name;
+		string interface_name = request.interface_name;
+		string method_name = request.method_name;
+		for (int i=0; i<api_methods.count(); i++)
+		{
+			ApiMethod api_method = api_methods[i];
+			if
+			(
+				api_method.object_name == object_name and
+				api_method.interface_name == interface_name and
+				api_method.method_name == method_name
+			)
+			{
+				return api_method;
+			}
+		}
+		return null;
+	}
+	
+	
+	
+	/**
+	 * Returns api methods
+	 */
+	pure Collection<ApiMethod> getApiMethodsByEntities(Collection<BaseStruct> entitites)
+	{
+		Collection<ApiList> api_lists = entitites.filter( lib::isInstance(classof ApiList) );
+		
+		Vector<BaseStruct> api_methods = new Vector();
+		api_methods.appendVector( entitites.filter(lib::isInstance( classof ApiMethod )) );
+		
+		for (int i=0; i<api_lists.count(); i++)
+		{
+			ApiList api_list = api_lists.item(i);
+			string class_name = api_list.className();
+			if (class_name == "") continue;
+			
+			Collection<ApiMethod> arr = static::getApiMethodsByClassName(class_name)
+			arr = arr.map
+			(
+				ApiMethod (ApiMethod item) use (api_list) => item.copy
+				{
+					"object_name": api_list.object_name,
+					"interface_name": (api_list.interface_name != "") ? api_list.interface_name : item.interface_name,
+				}
+			);
+			api_methods.appendVector(arr);
+		}
+		
+		return api_methods.toCollection();
+	}
+	
+	
+	
+	/**
+	 * Returns api methods by class name
+	 */
+	pure Collection<ApiMethod> getApiMethodsByClassName(string class_name)
+	{
+		Vector<ApiMethod> api_methods = new Vector<ApiMethod>();
+		IntrospectionClass class_info = RuntimeUtils::getClassIntrospection(class_name);
+		
+		/* Get routes info */
+		class_info.methods.each
+		(
+			void (Collection<ApiMethod> annotations, string class_method_name) use (api_methods, class_name)
+			{
+				annotations.each
+				(
+					void (ApiMethod api_method) use (api_methods, class_name, class_method_name)
+					{
+						if (api_method == null) return;
+						if (api_method instanceof ApiMethod)
+						{
+							api_methods.push
+							(
+								api_method.copy
+								{
+									"class_name": class_name,
+									"class_method_name": class_method_name,
+								}
+							);
+						}
+					}
+				);
+			}
+		);
+		
+		return api_methods.toCollection();
+	}
 }

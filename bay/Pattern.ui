@@ -15,15 +15,17 @@
 <body>
 
 %var string model_encoded = rs::base64_encode_url(rtl::json_encode(model));
+%var string frontend_storage = rs::base64_encode_url(rtl::json_encode(layout.frontend_storage));
 
 <div id='root'>{ content }</div>
 <input id='root_model' type='hidden' value={ model_encoded } />
+<input id='frontend_storage' type='hidden' value={ frontend_storage } />
 
-<script src="/js/runtime.js"></script>
-<script src="/js/app.js"></script>
+<script src={ "/js/runtime.js?_=" ~ model.f_inc }></script>
+<script src={ "/js/app.js?_=" ~ model.f_inc }></script>
 
 <script>
-runWebApp(@json{ params["env"] });
+runWebApp(@json{ layout.frontend_env });
 </script>
 
 </body>

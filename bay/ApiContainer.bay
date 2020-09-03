@@ -18,13 +18,12 @@
  
 namespace Runtime.Web.Backend;
 
-use Runtime.CoreStruct;
-use Runtime.Annotations.Entity;
+use Runtime.BaseStruct;
 use Runtime.Core.RemoteCallAnswer;
 use Runtime.Core.RemoteCallRequest;
 
 
-struct ApiContainer extends Entity
+struct ApiContainer extends BaseStruct
 {
 	RemoteCallAnswer answer = null;
 	RemoteCallRequest request = null;

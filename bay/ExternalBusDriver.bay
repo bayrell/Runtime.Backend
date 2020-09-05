@@ -75,6 +75,9 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 		
 		string app_name = request.app_name;
 		
+		/* Set app name */
+		answer <= app_name <= @.main_module;
+		
 		/* Check correct app name */
 		if (app_name != "self" and app_name != @.main_module)
 		{

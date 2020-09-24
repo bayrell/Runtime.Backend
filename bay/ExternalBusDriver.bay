@@ -28,6 +28,7 @@ use Runtime.Core.CoreDriver;
 use Runtime.Core.Message;
 use Runtime.Core.RemoteCallAnswer;
 use Runtime.Core.RemoteCallRequest;
+use Runtime.Exceptions.FileNotFound;
 use Runtime.Exceptions.RuntimeException;
 use Runtime.Web.Backend.ApiContainer;
 use Runtime.Web.Backend.ApiList;
@@ -85,9 +86,10 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 			answer = answer::exception
 			(
 				answer,
-				new ApiException
+				new FileNotFound
 				(
-					_("Runtime", "Wrong app name"),
+					app_name,
+					_("Runtime", "App"),
 					rtl::ERROR_API_WRONG_APP_NAME
 				)
 			);
@@ -103,9 +105,10 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 			answer = answer::exception
 			(
 				answer,
-				new ApiException
+				new FileNotFound
 				(
-					_("Runtime", "Api not found"),
+					request.object_name,
+					_("Runtime", "Api"),
 					rtl::ERROR_API_NOT_FOUND
 				)
 			);
@@ -124,9 +127,10 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 			answer = answer::exception
 			(
 				answer,
-				new ApiException
+				new FileNotFound
 				(
-					_("Runtime", "Api found but method does not exists"),
+					request.object_name ~ "::" ~ request.interface_name ~ "::" ~ request.method_name,
+					_("Runtime", "Method"),
 					rtl::ERROR_API_NOT_FOUND
 				)
 			);

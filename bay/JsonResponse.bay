@@ -35,9 +35,9 @@ struct JsonResponse extends Response
 	 */
 	protected void initData(JsonResponse old_model, Dict changed = null)
 	{
-		Dict<string> headers = this.headers;
-		if (headers == null) headers = new Dict<string>();
-		headers = headers.setIm("Content-Type", "application/json");
+		Collection<string> headers = this.headers;
+		if (headers == null) headers = new Collection<string>();
+		headers = headers.pushIm("Content-Type: application/json");
 		this.assignValue("headers", headers);
 	}
 	

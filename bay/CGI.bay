@@ -119,26 +119,25 @@ static class CGI
 					$cookie = $container->new_cookies->item($ctx, $key);
 					if ($cookie != null && $cookie->name)
 					{
-						setcookie(
-							$cookie->name,
-							$cookie->value,
-							$cookie->expire,
-							$cookie->path,
-							$cookie->domain,
-							$cookie->secure,
-							$cookie->httponly
-						);
+						$str = [];
+						$str[] = "Set-Cookie: " . urlencode($cookie->name) . "=" . urlencode($cookie->value);
+						$str[] = "Expires=" . date(DATE_RFC822, $cookie->expire);
+						if ($cookie->domain) $str[] = "Domain=" . $cookie->domain;
+						if ($cookie->path) $str[] = "Path=" . $cookie->path;
+						if ($cookie->secure) $str[] = "Secure";
+						if ($cookie->httponly) $str[] = "HttpOnly";
+						
+						/* Set cookie */
+						header( implode(";", $str) );
 					}
 				}
 			}
 			if ($container->response->headers != null)
 			{
-				$keys = $container->response->headers->keys($ctx);
-				for ($i=0; $i<$keys->count($ctx); $i++)
+				for ($i=0; $i<$container->response->headers->count($ctx); $i++)
 				{
-					$key = $keys->item($ctx, $i);
-					$value = $container->response->headers->item($ctx, $key);
-					header($key . ": " . $value);
+					$value = $container->response->headers->item($ctx, $i);
+					header($value);
 				}
 			}
 			$response = $container->response;

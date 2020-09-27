@@ -100,6 +100,18 @@ static class Routes
 		
 		JsonResponse response = new JsonResponse{ "data": answer != null ? answer.takeDict() : null };
 		container <= response <= response;
+		
+		/* Add answer cookies */
+		if (container.new_cookies == null) container <= new_cookies <= new Dict();
+		if (answer.new_cookies != null) container <= new_cookies <= container.new_cookies.concat(answer.new_cookies);
+		
+		/* Add answer headers */
+		if (container.new_headers == null) container <= new_headers <= new Collection();
+		if (answer.new_headers != null) container <= new_headers <= container.new_headers.concat(answer.new_headers);
+		
+		/* HTTP code */
+		container <= new_http_code <= answer.new_http_code;
+		
 		return [ container ];
 	}
 	

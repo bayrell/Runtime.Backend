@@ -61,6 +61,9 @@ static class Routes
 					rtl::ERROR_API_WRONG_FORMAT
 				)
 			);
+			
+			/* Set 400 code */
+			answer <= new_http_code <= 400;
 		}
 		else
 		{
@@ -98,7 +101,21 @@ static class Routes
 			};
 		}
 		
-		JsonResponse response = new JsonResponse{ "data": answer != null ? answer.takeDict() : null };
+		JsonResponse response = new JsonResponse
+		{
+			"data": answer != null ? answer.takeDict().intersect([
+				"app_name",
+				"object_name",
+				"interface_name",
+				"method_name",
+				"code",
+				"success_message",
+				"error_message",
+				"error_name",
+				"have_answer",
+				"response",
+			]) : null
+		};
 		container <= response <= response;
 		
 		/* Add answer cookies */
@@ -110,7 +127,7 @@ static class Routes
 		if (answer.new_headers != null) container <= new_headers <= container.new_headers.concat(answer.new_headers);
 		
 		/* HTTP code */
-		container <= new_http_code <= answer.new_http_code;
+		container <= response <= http_code <= answer.new_http_code;
 		
 		return [ container ];
 	}

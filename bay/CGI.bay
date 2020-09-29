@@ -90,6 +90,7 @@ static class CGI
 				"payload" => $payload->toDict($ctx),
 				"cookies" => $cookies->toDict($ctx),
 				"start_time" => $start_time,
+				"route_prefix" => $ctx->enviroments->get($ctx, "X-ROUTE-PREFIX", ""),
 			])
 		);
 		return $r;
@@ -146,7 +147,7 @@ static class CGI
 		else
 		{
 			http_response_code(404);
-			echo "404 Not found";
+			echo "404 Response not found";
 		}
 		#endif
 	}

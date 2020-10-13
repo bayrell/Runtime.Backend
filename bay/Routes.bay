@@ -21,6 +21,7 @@ namespace Runtime.Web.Backend;
 use Runtime.RuntimeUtils;
 use Runtime.Core.ApiException;
 use Runtime.Core.RemoteCallAnswer;
+use Runtime.Exceptions.FileNotFound;
 use Runtime.Web.RenderContainer;
 use Runtime.Web.RenderDriver;
 use Runtime.Web.Route;
@@ -75,8 +76,30 @@ static class Routes
 			string storage1 = container.request.payload.get("storage", "");
 			var storage = RuntimeUtils::json_decode(storage1);
 			
+			/* Check correct app name */
+			string app_name = container.route_params.item("app_name");
+			if (app_name != "self" and app_name != @.main_module)
+			{
+				/* Set exception */
+				answer = answer::exception
+				(
+					answer,
+					new FileNotFound
+					(
+						app_name,
+						_("Runtime", "App"),
+						rtl::ERROR_API_WRONG_APP_NAME
+					)
+				);
+				
+				/* Set 404 code */
+				answer <= new_http_code <= 404;
+				
+				return answer;
+			}
+			
 			/* Send request */
-			answer = await RenderDriver::remoteBusCall
+			answer = await RenderDriver::externalBusCall
 			(
 				{
 					"app_name": container.route_params.item("app_name"),

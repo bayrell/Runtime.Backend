@@ -21,6 +21,7 @@ namespace Runtime.Web.Backend;
 use Runtime.lib;
 use Runtime.BaseStruct;
 use Runtime.IntrospectionClass;
+use Runtime.IntrospectionInfo;
 use Runtime.RuntimeUtils;
 use Runtime.Core.ApiException;
 use Runtime.Core.BusDriverInterface;
@@ -33,6 +34,7 @@ use Runtime.Exceptions.RuntimeException;
 use Runtime.Web.Backend.ApiContainer;
 use Runtime.Web.Backend.ApiList;
 use Runtime.Web.Backend.ApiMethod;
+use Runtime.Web.Backend.ApiMiddleware;
 
 
 class ExternalBusDriver extends CoreDriver implements BusDriverInterface
@@ -150,6 +152,11 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 		/* Call api */
 		try
 		{
+			/* Middleware */
+			list res = await static::callMiddleware(request, answer, class_name, class_method_name);
+			request = res[0];
+			answer = res[1];
+			
 			fn f = rtl::method(class_name, class_method_name);
 			list res = await f(request, answer);
 			answer = res[1];
@@ -174,6 +181,54 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 		}
 		
 		return answer;
+	}
+	
+	
+	
+	/**
+	 * Render chain
+	 * Call route middlewares
+	 */
+	static async list callMiddleware
+	(
+		RemoteCallRequest request, RemoteCallAnswer answer,
+		string class_name, string class_method_name
+	)
+	{
+		Collection<ApiMiddleware> middlewares = [];
+		
+		/* Get middleware from class */
+		fn getMethodInfoByName = rtl::method(class_name, "getClassInfo");
+		IntrospectionInfo info = getMethodInfoByName();
+		middlewares = middlewares.concatIm
+		(
+			info.annotations.filter( lib::isInstance(classof ApiMiddleware) )
+		)
+		
+		/* Get middleware from method */
+		fn getMethodInfoByName = rtl::method(class_name, "getMethodInfoByName");
+		IntrospectionInfo info = getMethodInfoByName(class_method_name);
+		middlewares = middlewares.concatIm
+		(
+			info.annotations.filter( lib::isInstance(classof ApiMiddleware) )
+		);
+		
+		/* Run each middleware */
+		for (int i=0; i<middlewares.count(i); i++)
+		{
+			ApiMiddleware m = middlewares.item(i);
+			Collection arr = rs::split("::", m.value);
+			string m_class_name = arr.get(0, "");
+			string m_method_name = arr.get(1, "");
+			fn f = rtl::method(m_class_name, m_method_name);
+			
+			/* Run method */
+			list res = await f(request, answer);
+			request = res[0];
+			answer = res[1];
+		}
+		
+		return [ request, answer ];
 	}
 	
 	

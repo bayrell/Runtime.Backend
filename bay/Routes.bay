@@ -76,6 +76,10 @@ static class Routes
 			string storage1 = container.request.payload.get("storage", "");
 			var storage = RuntimeUtils::json_decode(storage1);
 			
+			/* Get time and sign */
+			string sign = container.request.payload.get("sign", "") |> default string "";
+			int time = container.request.payload.get("time", "") |> default int 0;
+			
 			/* Check correct app name */
 			string app_name = container.route_params.item("app_name");
 			if (app_name != "self" and app_name != @.main_module)
@@ -105,6 +109,8 @@ static class Routes
 				"interface_name": container.route_params.item("interface_name"),
 				"method_name": container.route_params.item("method_name"),
 				"data": data,
+				"time": time,
+				"sign": sign,
 			};
 		}
 		

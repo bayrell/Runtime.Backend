@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-namespace Runtime.Web.Backend;
+namespace Runtime.Backend;
 
 use Runtime.lib;
 use Runtime.BaseStruct;
@@ -31,10 +31,10 @@ use Runtime.Core.RemoteCallAnswer;
 use Runtime.Core.RemoteCallRequest;
 use Runtime.Exceptions.FileNotFound;
 use Runtime.Exceptions.RuntimeException;
-use Runtime.Web.Backend.ApiContainer;
-use Runtime.Web.Backend.ApiList;
-use Runtime.Web.Backend.ApiMethod;
-use Runtime.Web.Backend.ApiMiddleware;
+use Runtime.Backend.ApiContainer;
+use Runtime.Backend.ApiList;
+use Runtime.Backend.ApiMethod;
+use Runtime.Backend.ApiMiddleware;
 
 
 class ExternalBusDriver extends CoreDriver implements BusDriverInterface

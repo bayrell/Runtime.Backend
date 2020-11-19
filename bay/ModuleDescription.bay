@@ -16,17 +16,15 @@
  *  limitations under the License.
  */
  
-namespace Runtime.Web.Backend;
+namespace Runtime.Backend;
 
 use Runtime.BaseStruct;
+use Runtime.Backend.ExternalBusDriver;
 use Runtime.Core.Context;
 use Runtime.Core.Driver;
 use Runtime.Core.Entity;
 use Runtime.Core.LambdaChain;
 use Runtime.Core.LambdaChainDeclare;
-use Runtime.Web.RenderDriver;
-use Runtime.Web.Backend.ExternalBusDriver;
-use Runtime.Web.Backend.Routes;
 
 
 static class ModuleDescription
@@ -36,7 +34,7 @@ static class ModuleDescription
 	 * Returns module name
 	 * @return string
 	 */
-	pure string getModuleName() => "Runtime.Web.Backend";
+	pure string getModuleName() => "Runtime.Backend";
 	
 	
 	
@@ -72,35 +70,8 @@ static class ModuleDescription
 		new LambdaChain
 		{
 			"name": "Runtime.Entities",
-			"value": "Runtime.Web.Backend.ModuleDescription::extendEntities",
+			"value": "Runtime.Backend.ModuleDescription::extendEntities",
 		},
-		
-		/* Render Chain. Set enviroments */
-		new LambdaChain
-		{
-			"name": RenderDriver::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.BackendHelper::renderChainSetFrontendEnv",
-			"pos": RenderDriver::RENDER_CHAIN_SET_FRONTEND_ENVIROMENTS,
-		},
-		
-		/* Render Chain. Pattern */
-		new LambdaChain
-		{
-			"name": RenderDriver::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.BackendHelper::renderChainPatternDefault",
-			"pos": RenderDriver::RENDER_CHAIN_RESPONSE - 1,
-		},
-		
-		/* Render Chain. Response */
-		new LambdaChain
-		{
-			"name": RenderDriver::RENDER_CHAIN,
-			"value": "Runtime.Web.Backend.BackendHelper::renderChainCreateResponse",
-			"pos": RenderDriver::RENDER_CHAIN_RESPONSE,
-		},
-		
-		/* Add routes */
-		new Entity{ "name": classof Routes },
 	];
 	
 	
@@ -110,15 +81,9 @@ static class ModuleDescription
 	 */
 	pure Collection<BaseStruct> extendEntities(Context c, Collection<BaseStruct> entities)
 	{
-		bool api = c |> "Runtime.Web.Backend", "api" |> default bool true;
-		string bus_class = c |> "Runtime.Web.Backend", "external_bus_class" |> default string "";
-		bool bus_default = c |> "Runtime.Web.Backend", "external_bus_default" |> default bool true;
-		
-		/* Enable api service */
-		if (api)
-		{
-			entities = entities.prependIm( new Entity{ "name": "Runtime.Web.Backend.Routes" } );
-		}
+		bool api = c |> "Runtime.Backend", "api" |> default bool true;
+		string bus_class = c |> "Runtime.Backend", "external_bus_class" |> default string "";
+		bool bus_default = c |> "Runtime.Backend", "external_bus_default" |> default bool true;
 		
 		/* Set default bus */
 		if (bus_class == "" and bus_default)

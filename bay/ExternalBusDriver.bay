@@ -313,7 +313,7 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 						if (api_method == null) return;
 						if (api_method instanceof ApiMethod)
 						{
-							api_methods.push
+							api_methods.pushValue
 							(
 								api_method.copy
 								{

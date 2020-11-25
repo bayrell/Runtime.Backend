@@ -20,6 +20,7 @@ namespace Runtime.Backend;
 
 use Runtime.BaseStruct;
 use Runtime.Backend.ExternalBusDriver;
+use Runtime.Backend.SystemBusDriver;
 use Runtime.Core.Context;
 use Runtime.Core.Driver;
 use Runtime.Core.Entity;
@@ -65,6 +66,9 @@ static class ModuleDescription
 	[
 		/* Register external bus driver */
 		new Driver{ "name": "default:external_bus", "value": classof ExternalBusDriver },
+		
+		/* Register system bus driver */
+		new Driver{ "name": "default:system_bus", "value": classof SystemBusDriver },
 		
 		/* Extend entities */
 		new LambdaChain

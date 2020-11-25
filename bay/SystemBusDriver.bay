@@ -31,16 +31,15 @@ use Runtime.Core.RemoteCallAnswer;
 use Runtime.Core.RemoteCallRequest;
 use Runtime.Exceptions.FileNotFound;
 use Runtime.Exceptions.RuntimeException;
-use Runtime.Backend.ApiContainer;
-use Runtime.Backend.ApiList;
-use Runtime.Backend.ApiMethod;
-use Runtime.Backend.ApiMiddleware;
+use Runtime.Backend.BusList;
+use Runtime.Backend.BusMethod;
+use Runtime.Backend.BusMiddleware;
 
 
-class ExternalBusDriver extends CoreDriver implements BusDriverInterface
+class SystemBusDriver extends CoreDriver implements BusDriverInterface
 {
 	
-	Collection<ApiMethod> api_methods = null;
+	Collection<BusMethod> bus_methods = null;
 	
 	
 	/**
@@ -48,7 +47,7 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 	 */
 	public async void startDriver()
 	{
-		this.api_methods = static::getApiMethodsByEntities(@.entities);
+		this.bus_methods = static::getBusMethodsByEntities(@.entities);
 	}
 	
 	
@@ -103,7 +102,7 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 		}
 		
 		/* Find api method */
-		ApiMethod api_method = this.findApiMethod(request);
+		BusMethod api_method = this.findBusMethod(request);
 		if (api_method == null)
 		{
 			/* Set exception */
@@ -195,14 +194,14 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 		string class_name, string class_method_name
 	)
 	{
-		Collection<ApiMiddleware> middlewares = [];
+		Collection<BusMiddleware> middlewares = [];
 		
 		/* Get middleware from class */
 		fn getMethodInfoByName = rtl::method(class_name, "getClassInfo");
 		IntrospectionInfo info = getMethodInfoByName();
 		middlewares = middlewares.concatIm
 		(
-			info.annotations.filter( lib::isInstance(classof ApiMiddleware) )
+			info.annotations.filter( lib::isInstance(classof BusMiddleware) )
 		)
 		
 		/* Get middleware from method */
@@ -210,13 +209,13 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 		IntrospectionInfo info = getMethodInfoByName(class_method_name);
 		middlewares = middlewares.concatIm
 		(
-			info.annotations.filter( lib::isInstance(classof ApiMiddleware) )
+			info.annotations.filter( lib::isInstance(classof BusMiddleware) )
 		);
 		
 		/* Run each middleware */
 		for (int i=0; i<middlewares.count(i); i++)
 		{
-			ApiMiddleware m = middlewares.item(i);
+			BusMiddleware m = middlewares.item(i);
 			Collection arr = rs::split("::", m.value);
 			string m_class_name = arr.get(0, "");
 			string m_method_name = arr.get(1, "");
@@ -236,15 +235,15 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 	/**
 	 * Find api method
 	 */
-	ApiMethod findApiMethod(RemoteCallRequest request)
+	BusMethod findBusMethod(RemoteCallRequest request)
 	{
-		Collection<ApiMethod> api_methods = this.api_methods;
+		Collection<BusMethod> bus_methods = this.bus_methods;
 		string object_name = request.object_name;
 		string interface_name = request.interface_name;
 		string method_name = request.method_name;
-		for (int i=0; i<api_methods.count(); i++)
+		for (int i=0; i<bus_methods.count(); i++)
 		{
-			ApiMethod api_method = api_methods[i];
+			BusMethod api_method = bus_methods[i];
 			if
 			(
 				api_method.object_name == object_name and
@@ -263,32 +262,32 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 	/**
 	 * Returns api methods
 	 */
-	pure Collection<ApiMethod> getApiMethodsByEntities(Collection<BaseStruct> entitites)
+	pure Collection<BusMethod> getBusMethodsByEntities(Collection<BaseStruct> entitites)
 	{
-		Collection<ApiList> api_lists = entitites.filter( lib::isInstance(classof ApiList) );
+		Collection<BusList> api_lists = entitites.filter( lib::isInstance(classof BusList) );
 		
-		Vector<BaseStruct> api_methods = new Vector();
-		api_methods.appendVector( entitites.filter(lib::isInstance( classof ApiMethod )) );
+		Vector<BaseStruct> bus_methods = new Vector();
+		bus_methods.appendVector( entitites.filter(lib::isInstance( classof BusMethod )) );
 		
 		for (int i=0; i<api_lists.count(); i++)
 		{
-			ApiList api_list = api_lists.item(i);
+			BusList api_list = api_lists.item(i);
 			string class_name = api_list.className();
 			if (class_name == "") continue;
 			
-			Collection<ApiMethod> arr = static::getApiMethodsByClassName(class_name)
+			Collection<BusMethod> arr = static::getBusMethodsByClassName(class_name)
 			arr = arr.map
 			(
-				ApiMethod (ApiMethod item) use (api_list) => item.copy
+				BusMethod (BusMethod item) use (api_list) => item.copy
 				{
 					"object_name": api_list.object_name,
 					"interface_name": (api_list.interface_name != "") ? api_list.interface_name : item.interface_name,
 				}
 			);
-			api_methods.appendVector(arr);
+			bus_methods.appendVector(arr);
 		}
 		
-		return api_methods.toCollection();
+		return bus_methods.toCollection();
 	}
 	
 	
@@ -296,24 +295,24 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 	/**
 	 * Returns api methods by class name
 	 */
-	pure Collection<ApiMethod> getApiMethodsByClassName(string class_name)
+	pure Collection<BusMethod> getBusMethodsByClassName(string class_name)
 	{
-		Vector<ApiMethod> api_methods = new Vector<ApiMethod>();
+		Vector<BusMethod> bus_methods = new Vector<BusMethod>();
 		IntrospectionClass class_info = RuntimeUtils::getClassIntrospection(class_name);
 		
 		/* Get routes info */
 		class_info.methods.each
 		(
-			void (Collection<ApiMethod> annotations, string class_method_name) use (api_methods, class_name)
+			void (Collection<BusMethod> annotations, string class_method_name) use (bus_methods, class_name)
 			{
 				annotations.each
 				(
-					void (ApiMethod api_method) use (api_methods, class_name, class_method_name)
+					void (BusMethod api_method) use (bus_methods, class_name, class_method_name)
 					{
 						if (api_method == null) return;
-						if (api_method instanceof ApiMethod)
+						if (api_method instanceof BusMethod)
 						{
-							api_methods.pushValue
+							bus_methods.pushValue
 							(
 								api_method.copy
 								{
@@ -327,6 +326,6 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 			}
 		);
 		
-		return api_methods.toCollection();
+		return bus_methods.toCollection();
 	}
 }

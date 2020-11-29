@@ -23,12 +23,12 @@ use Runtime.BaseStruct;
 use Runtime.IntrospectionClass;
 use Runtime.IntrospectionInfo;
 use Runtime.RuntimeUtils;
-use Runtime.Core.ApiException;
 use Runtime.Core.BusDriverInterface;
 use Runtime.Core.CoreDriver;
 use Runtime.Core.Message;
 use Runtime.Core.RemoteCallAnswer;
 use Runtime.Core.RemoteCallRequest;
+use Runtime.Exceptions.ApiException;
 use Runtime.Exceptions.FileNotFound;
 use Runtime.Exceptions.RuntimeException;
 use Runtime.Backend.ApiContainer;
@@ -178,6 +178,9 @@ class ExternalBusDriver extends CoreDriver implements BusDriverInterface
 					rtl::ERROR_FATAL
 				)
 			);
+			
+			/* Set error name */
+			answer <= error_name <= e.getClassName();
 		}
 		
 		return answer;
